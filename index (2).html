@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trade Mistake Journal</title>
+  <!-- Tailwind CDN (for quick deploy) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* line-clamp utility (for multi-line ellipsis) */
+    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  <!-- Landing -->
+  <section id="landing" class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white text-center p-6">
+    <h1 class="text-4xl md:text-6xl font-bold mb-4">Trade Mistake Journal</h1>
+    <p class="text-lg md:text-xl mb-8 text-slate-300">บันทึกข้อผิดพลาด • อัปโหลดรูป • ให้คะแนน • สรุปผลอัตโนมัติ</p>
+    <button id="btnStart" class="px-8 py-3 rounded-2xl bg-green-500 hover:bg-green-400 text-lg font-semibold shadow-lg transition">เริ่มต้นใช้งาน</button>
+  </section>
+
+  <!-- App Shell -->
+  <section id="app" class="hidden">
+    <header class="sticky top-0 z-10 backdrop-blur bg-white/80 border-b border-slate-200">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Trade Mistake Journal</h1>
+        <nav class="flex gap-2">
+          <button data-page="summary" class="nav-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-900 text-white">Summary</button>
+          <button data-page="periods" class="nav-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200 hover:bg-slate-300">วันนี้/สัปดาห์/เดือน</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-4 space-y-6">
+      <!-- Summary Page -->
+      <section id="page-summary" class="space-y-6">
+        <!-- Add Trade Form -->
+        <section class="bg-white rounded-2xl shadow p-4">
+          <h2 class="text-lg font-semibold mb-3">เพิ่มบันทึกข้อผิดพลาด (Add Trade)</h2>
+          <form id="tradeForm" class="grid md:grid-cols-2 gap-3">
+            <div class="col-span-2">
+              <label class="block text-sm mb-1">Date</label>
+              <input required type="date" id="f-date" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+            </div>
+            <div>
+              <label class="block text-sm mb-1">Symbol</label>
+              <input id="f-symbol" placeholder="XAUUSD / BTCUSD / SET50 ..." class="w-full px-3 py-2 rounded-xl border border-slate-300" />
+            </div>
+            <div>
+              <label class="block text-sm mb-1">Lot</label>
+              <input id="f-lot" inputmode="decimal" placeholder="0.01" class="w-full px-3 py-2 rounded-xl border border-slate-300" />
+            </div>
+            <div>
+              <label class="block text-sm mb-1">Stop Loss (SL)</label>
+              <input id="f-sl" inputmode="decimal" placeholder="e.g. 2365.50" class="w-full px-3 py-2 rounded-xl border border-slate-300" />
+            </div>
+            <div>
+              <label class="block text-sm mb-1">Take Profit (TP)</label>
+              <input id="f-tp" inputmode="decimal" placeholder="e.g. 2340.00" class="w-full px-3 py-2 rounded-xl border border-slate-300" />
+            </div>
+            <div>
+              <label class="block text-sm mb-1">P/L (THB)</label>
+              <input id="f-pl" inputmode="decimal" placeholder="กำไรเป็นบวก ขาดทุนเป็นลบ (ปล่อยว่างได้)" class="w-full px-3 py-2 rounded-xl border border-slate-300" />
+            </div>
+            <div class="col-span-2">
+              <label class="block text-sm mb-1">Why / What happened?</label>
+              <textarea id="f-reason" rows="3" placeholder="ทำไมถึงออกออเดอร์? พลาดตรงไหน? บทเรียนคืออะไร?" class="w-full px-3 py-2 rounded-xl border border-slate-300"></textarea>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-sm mb-1">Feeling</label>
+              <textarea id="f-feeling" rows="2" placeholder="รู้สึกยังไงกับไม้นี้ เช่น โลภ กลัว เหนื่อย รีบ กล้าจนเกินไป ฯลฯ" class="w-full px-3 py-2 rounded-xl border border-slate-300"></textarea>
+            </div>
+
+            <!-- Image Picker -->
+            <div class="col-span-2">
+              <label class="block text-sm mb-1">Screenshot / Image</label>
+              <div id="dropzone" role="button" class="rounded-2xl border-2 border-dashed border-slate-300 hover:border-slate-400 bg-slate-50 p-4 text-center cursor-pointer">
+                <div id="dz-empty" class="space-y-1">
+                  <div class="text-sm text-slate-700">ลากรูปมาวาง หรือ <span class="underline">คลิกเพื่อเลือกไฟล์</span></div>
+                  <div class="text-xs text-slate-500">รองรับ JPG/PNG • แนะนำไม่เกิน ~2MB</div>
+                </div>
+                <div id="dz-preview" class="hidden">
+                  <img id="dz-img" alt="preview" class="mx-auto max-h-48 rounded-xl border" />
+                  <div id="dz-meta" class="mt-2 text-sm text-slate-600"></div>
+                  <div class="mt-3 flex justify-center gap-2">
+                    <button type="button" id="dz-change" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white">เปลี่ยนรูป</button>
+                    <button type="button" id="dz-clear" class="px-3 py-1.5 rounded-lg bg-slate-200">ลบรูป</button>
+                  </div>
+                </div>
+              </div>
+              <input id="file" type="file" accept="image/*" class="hidden" />
+            </div>
+
+            <div class="col-span-2 flex gap-2">
+              <button class="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800">Save</button>
+              <button type="button" id="btnResetForm" class="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300">Reset</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Outcome Summary (focus: การสรุปการออกไม้) -->
+        <section class="bg-white rounded-2xl shadow p-4">
+          <h3 class="text-lg font-semibold mb-3">สรุปการออกไม้ (Outcome)</h3>
+          <div id="outcomeStats" class="grid md:grid-cols-4 gap-3 mb-4"></div>
+          <div class="grid md:grid-cols-2 gap-3">
+            <div class="rounded-xl border p-3">
+              <div class="text-sm text-slate-600 mb-1">Top Reasons</div>
+              <div id="topReasons" class="text-slate-900 min-h-[2rem]">-</div>
+            </div>
+            <div class="rounded-xl border p-3">
+              <div class="text-sm text-slate-600 mb-1">Top Feelings</div>
+              <div id="topFeelings" class="text-slate-900 min-h-[2rem]">-</div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- Periods Page -->
+      <section id="page-periods" class="hidden space-y-6"></section>
+    </main>
+
+    <footer class="max-w-6xl mx-auto p-4 text-center text-sm text-slate-500">Data is saved locally in your browser (LocalStorage).</footer>
+  </section>
+
+  <script>
+  // ===== Utilities =====
+  const STORAGE_KEY = 'trade_mistake_journal_v1';
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const todayISO = () => new Date().toISOString().slice(0,10);
+  const uid = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
+  const cls = (...xs) => xs.filter(Boolean).join(' ');
+  function currency(n){ if(n==null || !isFinite(n)) return '-'; try { return n.toLocaleString(undefined,{style:'currency',currency:'THB'});} catch{ return String(n);} }
+  function startOfWeek(d=new Date()){ const dt=new Date(d); const day=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-day); dt.setHours(0,0,0,0); return dt; }
+  function startOfMonth(d=new Date()){ const dt=new Date(d.getFullYear(), d.getMonth(), 1); dt.setHours(0,0,0,0); return dt; }
+  function startOfYear(d=new Date()){ const dt=new Date(d.getFullYear(), 0, 1); dt.setHours(0,0,0,0); return dt; }
+  function withinRange(dateStr, from, to){ const t=new Date(dateStr).getTime(); return t>=+from && t<+to; }
+  function extractTopWords(texts, limit=5){ const text=(texts||[]).join(' ').toLowerCase(); const words=(text.match(/[\p{L}']+/gu)||[]); const stop=new Set(['และ','ที่','ว่า','ก็','ได้','ใน','คือ','มัน','มาก','เลย','ๆ','the','and','a','to','of','is','was','are','for','with','this','that']); const freq={}; for(const w of words){ if(stop.has(w)||w.length<=1) continue; freq[w]=(freq[w]||0)+1;} return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,limit); }
+  function outcomeStats(entries){ const wins=entries.filter(e=>(e.pl??0)>0); const losses=entries.filter(e=>(e.pl??0)<0); const zero=entries.filter(e=>(e.pl??0)===0); const sum=xs=>xs.reduce((a,b)=>a+b,0); const avg=xs=>xs.length? sum(xs)/xs.length:0; const best=entries.length?[...entries].sort((a,b)=>(b.pl??-Infinity)-(a.pl??-Infinity))[0]:null; const worst=entries.length?[...entries].sort((a,b) => (a.pl??Infinity)-(b.pl??Infinity))[0]:null; return { total:entries.length, win:wins.length, loss:losses.length, breakeven:zero.length, winRate: entries.length? (wins.length/entries.length*100):0, avgWin: avg(wins.map(e=>e.pl||0)), avgLoss: avg(losses.map(e=>Math.abs(e.pl||0)))*-1, avgScoreAll: avg(entries.map(e=>e.score||0)), avgScoreWin: avg(wins.map(e=>e.score||0)), avgScoreLoss: avg(losses.map(e=>e.score||0)), best, worst, topReasons: extractTopWords(entries.map(e=>e.reason),5), topFeelings: extractTopWords(entries.map(e=>e.feeling),5) }; }
+
+  // ===== State =====
+  let entries = [];
+  function load(){ try{ const raw=localStorage.getItem(STORAGE_KEY); entries = raw? JSON.parse(raw): []; } catch{ entries=[]; } }
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+
+  // ===== Init =====
+  const landing = $('#landing');
+  const app = $('#app');
+  const btnStart = $('#btnStart');
+  const navBtns = $$('.nav-btn');
+  const pageSummary = $('#page-summary');
+  const pagePeriods = $('#page-periods');
+
+  btnStart.addEventListener('click', () => { landing.classList.add('hidden'); app.classList.remove('hidden'); redrawAll(); });
+  navBtns.forEach(btn=> btn.addEventListener('click', () => {
+    navBtns.forEach(b=>{ b.classList.remove('bg-slate-900','text-white'); b.classList.add('bg-slate-200'); });
+    btn.classList.add('bg-slate-900','text-white'); btn.classList.remove('bg-slate-200');
+    const page = btn.dataset.page;
+    if(page==='summary'){ pageSummary.classList.remove('hidden'); pagePeriods.classList.add('hidden'); }
+    else { pageSummary.classList.add('hidden'); pagePeriods.classList.remove('hidden'); redrawPeriods(); }
+  }));
+
+  // ===== Form handling =====
+  const fDate = $('#f-date');
+  const fSymbol = $('#f-symbol');
+  const fLot = $('#f-lot');
+  const fSL = $('#f-sl');
+  const fTP = $('#f-tp');
+  const fPL = $('#f-pl');
+  const fReason = $('#f-reason');
+  const fFeeling = $('#f-feeling');
+  const form = $('#tradeForm');
+  const fileInput = $('#file');
+  const dz = $('#dropzone');
+  const dzEmpty = $('#dz-empty');
+  const dzPreview = $('#dz-preview');
+  const dzImg = $('#dz-img');
+  const dzMeta = $('#dz-meta');
+  const dzChange = $('#dz-change');
+  const dzClear = $('#dz-clear');
+  const btnResetForm = $('#btnResetForm');
+
+  function setDefaultDate(){ fDate.value = todayISO(); }
+  setDefaultDate();
+
+  // drag & drop
+  dz.addEventListener('click', ()=> fileInput.click());
+  dz.addEventListener('dragover', e=> e.preventDefault());
+  dz.addEventListener('drop', e=>{ e.preventDefault(); const f=e.dataTransfer.files?.[0]; if(f) handleImageFile(f); });
+  fileInput.addEventListener('change', e=>{ const f=e.target.files?.[0]; if(f) handleImageFile(f); });
+  dzChange.addEventListener('click', ()=> fileInput.click());
+  dzClear.addEventListener('click', ()=> setImage(null));
+
+  function setImage(info){
+    if(!info){ dzEmpty.classList.remove('hidden'); dzPreview.classList.add('hidden'); dzImg.src=''; dzMeta.textContent=''; fileInput.value=''; return; }
+    dzImg.src = info.url; dzMeta.textContent = `${info.name} • ${formatBytes(info.size)} • ${info.width}×${info.height}px`;
+    dzEmpty.classList.add('hidden'); dzPreview.classList.remove('hidden');
+  }
+
+  function formatBytes(bytes){ if(bytes==null) return ''; const units=['B','KB','MB','GB']; let i=0, n=bytes; while(n>=1024&&i<units.length-1){ n/=1024; i++; } const fixed = (n<10&&i>0)?1:0; return `${n.toFixed(fixed)} ${units[i]}`; }
+
+  function handleImageFile(file){
+    const reader = new FileReader(); const img = new Image();
+    reader.onload = ()=>{ img.onload = ()=>{
+      const maxDim=1600; let {width,height} = img; const scale = Math.min(1, maxDim/Math.max(width,height)); width=Math.round(width*scale); height=Math.round(height*scale);
+      const canvas=document.createElement('canvas'); canvas.width=width; canvas.height=height; const ctx=canvas.getContext('2d'); if(!ctx) return;
+      ctx.drawImage(img,0,0,width,height); let url;
+      try{ url = canvas.toDataURL('image/jpeg',0.85);}catch{ url = canvas.toDataURL('image/png'); }
+      setImage({ url, name:file.name, size:file.size, width, height });
+    }; img.src = reader.result; };
+    reader.readAsDataURL(file);
+  }
+
+  btnResetForm.addEventListener('click', resetForm);
+  function resetForm(){ fDate.value=todayISO(); fSymbol.value=''; fReason.value=''; fSL.value=''; fTP.value=''; fLot.value=''; fPL.value=''; fFeeling.value=''; $('#score').value=5; $('#scoreVal').textContent='5'; setImage(null); }
+
+  // score slider
+  const score = document.createElement('div');
+  score.innerHTML = `
+    <div class="col-span-2">
+      <label class="block text-sm mb-1">Score (0 – 10)</label>
+      <input type="range" min="0" max="10" value="5" id="score" class="w-full" />
+      <div class="text-sm text-slate-600">คะแนน: <span id="scoreVal" class="font-semibold">5</span></div>
+    </div>`;
+  form.insertBefore(score.firstElementChild, form.children[form.children.length-2]);
+  form.addEventListener('input', (e)=>{
+    if(e.target.id==='score'){ $('#scoreVal').textContent = String(e.target.value); }
+  });
+
+  form.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const entry = {
+      id: uid(),
+      date: fDate.value,
+      symbol: (fSymbol.value||'-').trim(),
+      reason: (fReason.value||'').trim(),
+      sl: fSL.value? Number(fSL.value): null,
+      tp: fTP.value? Number(fTP.value): null,
+      lot: fLot.value? Number(fLot.value): null,
+      pl: fPL.value===''? null : Number(fPL.value),
+      feeling: (fFeeling.value||'').trim(),
+      score: Number($('#score').value||5),
+      imageDataUrl: dzImg.src || undefined,
+    };
+    entries = [entry, ...entries]; save(); resetForm(); redrawAll();
+  });
+
+  // ===== Rendering =====
+  function redrawAll(){
+    renderOutcomeSummary();
+    buildPeriodsPage();
+  }
+
+  function renderOutcomeSummary(){
+    load();
+    const s = outcomeStats(entries);
+    const el = $('#outcomeStats');
+    el.innerHTML = '';
+    const stats = [
+      statCard('จำนวนไม้', String(s.total)),
+      statCard('Win Rate', `${s.winRate.toFixed(1)}%`, s.winRate>=50?'green':'red'),
+      statCard('กำไรเฉลี่ย/ไม้ (เฉพาะไม้กำไร)', currency(s.avgWin), 'green'),
+      statCard('ขาดทุนเฉลี่ย/ไม้ (เฉพาะไม้ขาดทุน)', currency(s.avgLoss), 'red'),
+      statCard('คะแนนเฉลี่ยทั้งหมด', s.avgScoreAll.toFixed(2)),
+      statCard('คะแนนเฉลี่ย (ชนะ)', s.avgScoreWin.toFixed(2)),
+      statCard('คะแนนเฉลี่ย (แพ้)', s.avgScoreLoss.toFixed(2)),
+      statCard('Best', s.best? `${s.best.symbol} • ${currency(s.best.pl)}`: '-', 'green'),
+    ].join('');
+    el.innerHTML = stats;
+
+    $('#topReasons').textContent = s.topReasons.length? s.topReasons.map(([w,c])=>`${w} (${c})`).join(', ') : '-';
+    $('#topFeelings').textContent = s.topFeelings.length? s.topFeelings.map(([w,c])=>`${w} (${c})`).join(', ') : '-';
+  }
+
+  function statCard(title, value, accent){
+    const base = 'rounded-2xl p-4 border ';
+    const style = accent==='green'? 'bg-green-50 border-green-200' : accent==='red'? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200';
+    return `<div class="${base+style}"><div class="text-sm text-slate-600">${title}</div><div class="text-2xl font-bold">${value}</div></div>`;
+  }
+
+  function buildPeriodsPage(){
+    const now = new Date();
+    const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate()+1); tomorrow.setHours(0,0,0,0);
+    const ranges = {
+      today: [new Date(new Date().setHours(0,0,0,0)), tomorrow],
+      week: [startOfWeek(now), new Date(startOfWeek(now).getTime()+7*86400000)],
+      month: [startOfMonth(now), new Date(new Date(now.getFullYear(), now.getMonth()+1, 1).setHours(0,0,0,0))],
+    };
+    const sections = [
+      { key:'today', label:'วันนี้' },
+      { key:'week', label:'สัปดาห์นี้' },
+      { key:'month', label:'เดือนนี้' },
+    ];
+
+    pagePeriods.innerHTML = '';
+    sections.forEach(({key,label})=>{
+      const [from,to] = ranges[key];
+      const list = entries.filter(e=> withinRange(e.date, from, to));
+      const s = outcomeStats(list);
+      const total = list.reduce((a,b)=> a + (b.pl??0), 0);
+
+      const statRow = [
+        statCard('จำนวนไม้', String(s.total)),
+        statCard('กำไร/ขาดทุนรวม', currency(total), total>=0?'green':'red'),
+        statCard('Win Rate', `${s.winRate.toFixed(1)}%`, s.winRate>=50?'green':'red'),
+        statCard('คะแนนเฉลี่ย', s.avgScoreAll.toFixed(2)),
+      ].join('');
+
+      const table = buildPLTable(list);
+
+      const sec = document.createElement('section');
+      sec.className = 'bg-white rounded-2xl shadow p-4';
+      sec.innerHTML = `<h3 class="text-lg font-semibold mb-3">${label}</h3><div class="grid md:grid-cols-4 gap-3 mb-4">${statRow}</div>${table}`;
+      pagePeriods.appendChild(sec);
+    });
+  }
+
+  function buildPLTable(list){
+    if(!list.length) return '<div class="text-slate-500">ไม่มีรายการ</div>';
+    const rows = list.map(e=>{
+      const resultText = e.pl==null? '-' : (e.pl>=0? 'กำไร' : 'ขาดทุน');
+      const plClass = (e.pl??0)>=0? 'text-green-600' : 'text-red-600';
+      const resultClass = e.pl==null? 'text-slate-500' : (e.pl>=0? 'text-green-700' : 'text-red-700');
+      return `<tr class="border-t">
+        <td class="p-3 whitespace-nowrap">${e.date}</td>
+        <td class="p-3">${e.symbol||'-'}</td>
+        <td class="p-3 font-medium ${resultClass}">${resultText}</td>
+        <td class="p-3 font-semibold ${plClass}">${currency(e.pl)}</td>
+        <td class="p-3">${e.score}</td>
+        <td class="p-3 max-w-[14rem] line-clamp-2">${e.feeling||'-'}</td>
+        <td class="p-3 max-w-[28rem] line-clamp-2">${e.reason||'-'}</td>
+      </tr>`;
+    }).join('');
+
+    return `
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border border-slate-200 rounded-xl overflow-hidden">
+          <thead class="bg-slate-100">
+            <tr class="text-left">
+              <th class="p-3">Date</th>
+              <th class="p-3">Symbol</th>
+              <th class="p-3">Result</th>
+              <th class="p-3">P/L</th>
+              <th class="p-3">Score</th>
+              <th class="p-3">Feeling</th>
+              <th class="p-3">Reason</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  function redrawPeriods(){ buildPeriodsPage(); }
+
+  // ===== Boot =====
+  load();
+  </script>
+</body>
+</html>
